@@ -1,12 +1,57 @@
 const admin = require('firebase-admin');
 const path = require('path');
 
+const parseServiceAccountFromEnv = () => {
+  // Option 1: full JSON in FIREBASE_SERVICE_ACCOUNT
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    const parsed = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    // Render/hosting often stores escaped newlines
+    if (parsed.private_key) {
+      parsed.private_key = parsed.private_key.replace(/\\n/g, '\n');
+    }
+    return parsed;
+  }
+
+  // Option 2: individual vars (fallback for stricter env managers)
+  const {
+    FIREBASE_PROJECT_ID,
+    FIREBASE_PRIVATE_KEY,
+    FIREBASE_CLIENT_EMAIL,
+  } = process.env;
+  if (FIREBASE_PROJECT_ID && FIREBASE_PRIVATE_KEY && FIREBASE_CLIENT_EMAIL) {
+    return {
+      type: 'service_account',
+      project_id: FIREBASE_PROJECT_ID,
+      private_key: FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      client_email: FIREBASE_CLIENT_EMAIL,
+    };
+  }
+
+  return null;
+};
+
 // Initialize Firebase Admin SDK (only once)
 if (!admin.apps.length) {
-  const serviceAccount = require(path.join(__dirname, '../../serviceAccount.json'));
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  // Production: prefer env var(s); Development: local file fallback
+  const serviceAccountFromEnv = parseServiceAccountFromEnv();
+
+  if (serviceAccountFromEnv) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccountFromEnv),
+    });
+  } else {
+    try {
+      const serviceAccount = require(path.join(__dirname, '../../serviceAccount.json'));
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+    } catch (err) {
+      throw new Error(
+        'Firebase credentials missing. Set FIREBASE_SERVICE_ACCOUNT env var on Render, ' +
+        'or provide FIREBASE_PROJECT_ID + FIREBASE_PRIVATE_KEY + FIREBASE_CLIENT_EMAIL.'
+      );
+    }
+  }
 }
 
 const db = admin.firestore();

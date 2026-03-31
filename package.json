@@ -1,11 +1,14 @@
 {
-  "name": "splitwise-backend",
+  "name": "zenvy-backend",
   "version": "1.0.0",
-  "description": "SplitWise Backend API",
+  "description": "Zenvy Backend API",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@seald-io/nedb": "^4.0.4",

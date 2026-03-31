@@ -1,3 +1,5 @@
-serviceAccount.json
-data/
+node_modules/
 uploads/
+*.env
+.env
+serviceAccount.json
